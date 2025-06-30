@@ -1,0 +1,23 @@
+export const pavtiData = {
+  RcptData: {
+    "VCH No": "H-2406-872163",
+    "SMK id": "109",
+    Date: "30-Mar-24",
+    "Donor Name": "Himanshubhai Visanjibhai Patel",
+    "Present City": "Indore_(Mp)",
+    "Mobile Number": "9884610525",
+    "Rcpt Mode": "E240543D45JBDHD / UPI",
+    "Ledger Name": "General Dan",
+    SubHead: "Rasoi",
+    Nimit: "Anniversary",
+    "Hastak Name": "Zyx",
+    "Prasad Status": "Baki",
+    "Tiffin Status": "Yes",
+    "Rasoi By": "હિમાંશુભાઈ વીસનજીભાઈ પટેલ",
+    Remarks: "To Check",
+    Amount: "9,999.00",
+    Narration: "to check whether coming or not",
+    "Entered by": "hari",
+    Time: "Printed On 30-Mar-24 at 15:34",
+  },
+};
