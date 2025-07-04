@@ -8,6 +8,7 @@ credentials/
 exports/
 uploads/
 walletStorage/
+build/
 
 
 .DS_Store

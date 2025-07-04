@@ -73,10 +73,21 @@ router.post("/bill", async (req, res) => {
       );
     }
 
-    const messageId = await whatsappService.sendMedia(chatId, imagePath);
+    // 🟡 TRY TO SEND WHATSAPP
+    let isError = false;
+    let messageId = null;
+
+    try {
+      messageId = await whatsappService.sendMedia(chatId, imagePath);
+    } catch (sendErr) {
+      console.error("Failed to send pavti via WhatsApp:", sendErr);
+      isError = true;
+    }
+
+    // ✅ Save the message either way
     await saveMessage(
       new Message({
-        messageId,
+        messageId: messageId || "error-" + Date.now(),
         message: "Bill PDF",
         mobileNumber: parseInt(contactNo),
         senderName: data["Donor Name"],
@@ -85,16 +96,29 @@ router.post("/bill", async (req, res) => {
         isDelivered: false,
         isSeen: false,
         hasAttachment: true,
+        isPavti: true,
+        isError, // 👈 Add your new flag here
         sendedAt: new Date(),
         userId: user._id.toString(),
       })
     );
 
     PDFService.cleanupFiles(imagePath, pdfPath);
-    res.status(200).json({ message: "Bill sent successfully" });
-  } catch (error) {
-    console.error("Bill error:", error);
-    res.status(500).json({ error: "Failed to send bill" });
+
+    if (isError) {
+      return res
+        .status(500)
+        .json({ success: false, message: "Pavti saved but failed to send." });
+    }
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Pavti sent successfully." });
+  } catch (err) {
+    console.error("Bill error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Something went wrong" });
   }
 });
 

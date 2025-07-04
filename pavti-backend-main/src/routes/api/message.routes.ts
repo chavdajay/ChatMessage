@@ -7,10 +7,9 @@ import {
   User,
   getUserById,
 } from "../../modules/user";
-import { getMessagesByUserId } from "../../modules/message";
+import { saveMessage, getMessagesByUserId } from "../../modules/message";
+import { Message } from "../../modules/message/types/message";
 import { MessageModel } from "../../modules/message";
-import { getSocketIO } from "../../socketHandler";
-import { log } from "console";
 
 const router = Router();
 const whatsappService = WhatsAppService.getInstance();
@@ -37,6 +36,44 @@ const whatsappService = WhatsAppService.getInstance();
  *       500:
  *         description: Failed to send messages
  */
+// router.get("/msg", async (req, res) => {
+//   try {
+//     const messages = msgData["DATA"]?.["MSGRPT"];
+//     if (!Array.isArray(messages)) {
+//       return res.status(400).json({ error: "Invalid message data" });
+//     }
+
+//     for (const contact of messages) {
+//       const contactNo = contact["ISD"].split("+")[1] + contact["Mobile No"];
+//       const chatId = `${contactNo}@c.us`;
+
+//       let user = await getUserByNumber(contactNo);
+//       if (!user) {
+//         user = await saveUser(
+//           new User({
+//             fullName: contact.Name,
+//             email: "",
+//             contactNo,
+//             isApprove: "approved",
+//             isActive: true,
+//             isTempName: false,
+//           })
+//         );
+//       }
+
+//       await whatsappService.sendMessage(chatId, contact["Message"]);
+
+//     }
+
+//     res.status(200).json({ message: "Messages sent successfully" });
+//   } catch (error) {
+//     console.error("Message sending error:", error);
+//     res.status(500).json({ error: "Failed to send messages" });
+//   }
+// });
+
+//New Code
+// ✅ GET version (static msgData)
 router.get("/msg", async (req, res) => {
   try {
     const messages = msgData["DATA"]?.["MSGRPT"];
@@ -44,33 +81,79 @@ router.get("/msg", async (req, res) => {
       return res.status(400).json({ error: "Invalid message data" });
     }
 
-    for (const contact of messages) {
-      const contactNo = contact["ISD"].split("+")[1] + contact["Mobile No"];
-      const chatId = `${contactNo}@c.us`;
-
-      let user = await getUserByNumber(contactNo);
-      if (!user) {
-        user = await saveUser(
-          new User({
-            fullName: contact.Name,
-            email: "",
-            contactNo,
-            isApprove: "approved",
-            isActive: true,
-            isTempName: false,
-          })
-        );
-      }
-
-      await whatsappService.sendMessage(chatId, contact["Message"]);
-    }
-
-    res.status(200).json({ message: "Messages sent successfully" });
+    await sendMessages(messages);
+    res.status(200).json({ message: "Messages sent successfully (GET)" });
   } catch (error) {
-    console.error("Message sending error:", error);
-    res.status(500).json({ error: "Failed to send messages" });
+    console.error("GET Message sending error:", error);
+    res.status(500).json({ error: "Failed to send messages (GET)" });
   }
 });
+
+// ✅ POST version (dynamic from req.body)
+router.post("/msg", async (req, res) => {
+  try {
+    const messages = req.body?.messages;
+    if (!Array.isArray(messages)) {
+      return res.status(400).json({ error: "Invalid message data" });
+    }
+
+    await sendMessages(messages);
+    res.status(200).json({ message: "Messages sent successfully (POST)" });
+  } catch (error) {
+    console.error("POST Message sending error:", error);
+    res.status(500).json({ error: "Failed to send messages (POST)" });
+  }
+});
+
+// ✅ Shared function for both GET and POST
+async function sendMessages(messages: any[]) {
+  for (const contact of messages) {
+    const contactNo = contact["ISD"].split("+")[1] + contact["Mobile No"];
+    const chatId = `${contactNo}@c.us`;
+
+    let user = await getUserByNumber(contactNo);
+    if (!user) {
+      user = await saveUser(
+        new User({
+          fullName: contact.Name,
+          email: "",
+          contactNo,
+          isApprove: "approved",
+          isActive: true,
+          isTempName: false,
+        })
+      );
+    }
+
+    let isError = false;
+    let messageId = null;
+
+    try {
+      messageId = await whatsappService.sendMessage(chatId, contact["Message"]);
+    } catch (err) {
+      console.error(`Failed to send message to ${contactNo}:`, err);
+      isError = true;
+    }
+
+    await saveMessage(
+      new Message({
+        messageId: messageId || "error-" + Date.now(),
+        message: contact["Message"],
+        mobileNumber: parseInt(contactNo),
+        senderName: contact.Name,
+        isReceived: false,
+        isSend: true,
+        isDelivered: false,
+        isSeen: false,
+        hasAttachment: false,
+        isRasoi: true,
+        isError, // ✅ added
+        sendedAt: new Date(),
+        userId: user._id.toString(),
+      })
+    );
+  }
+}
 
 /**
  * @swagger
@@ -308,8 +391,6 @@ router.post("/messages/send/user/:userId", async (req, res) => {
 
 router.post("/messages/send/number", async (req, res) => {
   try {
-    console.log("/messages/send/number", req.body);
-
     const { contactNo, message } = req.body;
 
     if (!contactNo || !message) {
@@ -333,22 +414,21 @@ router.post("/messages/send/number", async (req, res) => {
         })
       );
     }
-    console.log("okokokokokokoko");
 
-    // Send message to WhatsApp
-    await whatsappService.sendMessage(chatId, message);
+    // ✅ Send message and get only the message ID
+    const messageId: string = await whatsappService.sendMessage(
+      chatId,
+      message
+    );
 
-    const io = getSocketIO();
-    const systemId = "system"; // Static ID for system/sender
+    const systemId = "system";
     const recipientId = String(user.contactNo);
-    const messageId = `msg-${Date.now()}`;
-    console.log("senderMessage");
 
-    // Sender's message
+    // ✅ Save message to DB
     const senderMessage = await MessageModel.create({
       userId: user._id,
       user: Number(user.contactNo?.slice(-4)),
-      messageId,
+      messageId: messageId || "error-" + Date.now(),
       message,
       isSend: true,
       sendedAt: new Date(),
@@ -358,31 +438,6 @@ router.post("/messages/send/number", async (req, res) => {
       mobileNumber: recipientId,
     });
 
-    console.log("reciever");
-
-    // Receiver's copy
-    await MessageModel.create({
-      userId: user._id,
-      user: Number(user.contactNo?.slice(-4)),
-      messageId,
-      message,
-      isSend: false,
-      sendedAt: new Date(),
-      from_user: systemId,
-      to_user: recipientId,
-      senderName: "System",
-      mobileNumber: recipientId,
-    })
-      .then((response) => {
-        if (io) {
-          console.log("reponse", response);
-          io.emit("new_message", response);
-        }
-      })
-      .catch((error) => {
-        console.log("error", error);
-      });
-
     return res.status(200).json({ message: "Message sent and saved" });
   } catch (error) {
     console.error("Send message error:", error);
@@ -390,7 +445,6 @@ router.post("/messages/send/number", async (req, res) => {
   }
 });
 
-export default router;
 
 router.get("/messages/send/number/:contactNo", async (req, res) => {
   try {
@@ -410,3 +464,37 @@ router.get("/messages/send/number/:contactNo", async (req, res) => {
     return res.status(500).json({ error: "Failed to get messages" });
   }
 });
+
+
+router.post("/messages/mark-seen", async (req, res) => {
+  try {
+    const { contactNo } = req.body;
+
+    if (!contactNo) {
+      return res.status(400).json({ message: "Contact number is required" });
+    }
+
+    const user = await getUserByNumber(contactNo);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update all unseen received messages for that user
+    await MessageModel.updateMany(
+      {
+        userId: user._id,
+        isReceived: true,
+        isSeen: false,
+      },
+      { $set: { isSeen: true } }
+    );
+
+    return res.status(200).json({ message: "Messages marked as seen" });
+  } catch (error) {
+    console.error("Error marking messages seen:", error);
+    return res.status(500).json({ error: "Failed to mark messages as seen" });
+  }
+});
+
+
+export default router;

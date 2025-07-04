@@ -61,6 +61,18 @@ const message = new Schema<IMessage>(
       type: Boolean,
       default: false,
     },
+    isPavti: {
+      type: Boolean,
+      default: false,
+    },
+    isRasoi: {
+      type: Boolean,
+      default: false,
+    },
+    isError: {
+      type: Boolean,
+      default: false,
+    },
     mobileNumber: {
       type: Number,
     },

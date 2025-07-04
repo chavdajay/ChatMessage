@@ -1,0 +1,24 @@
+// .vscode/launch.json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Full Backend (compiled JS)",
+      "type": "node",
+      "request": "launch",
+
+      // Main compiled entry point (after tsc)
+      "program": "${workspaceFolder}/pavti-backend-main/dist/server.js",
+
+      // Root of your backend project
+      "cwd": "${workspaceFolder}/pavti-backend-main",
+
+      // Watch built JS files + sourcemaps
+      "outFiles": [
+        "${workspaceFolder}/pavti-backend-main/dist/**/*.js"
+      ],
+      "sourceMaps": true,
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}

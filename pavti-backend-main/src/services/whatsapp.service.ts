@@ -85,31 +85,60 @@ export class WhatsAppService {
     }
   }
 
-  public async sendMessage(chatId: string, message: string): Promise<void> {
-    try {
-      console.log("sendMessage");
-      
-      await axios.post(
-        `${this.baseUrl}/${this.phoneNumberId}/messages`,
-        {
-          messaging_product: "whatsapp",
-          recipient_type: "individual",
-          to: chatId.replace("@c.us", ""),
-          type: "text",
-          text: {
-            body: message,
-          },
+  // public async sendMessage(chatId: string, message: string): Promise<void> {
+  //   try {
+  //     return await axios.post(
+  //       `${this.baseUrl}/${this.phoneNumberId}/messages`,
+  //       {
+  //         messaging_product: "whatsapp",
+  //         recipient_type: "individual",
+  //         to: chatId.replace("@c.us", ""),
+  //         type: "text",
+  //         text: {
+  //           body: message,
+  //         },
+  //       },
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${this.accessToken}`,
+  //           "Content-Type": "application/json",
+  //         },
+  //       }
+  //     );
+  //   } catch (error) {
+  //     console.error("Error sending message:", error);
+  //     throw error;
+  //   }
+  // }
+
+ public async sendMessage(chatId: string, message: string): Promise<string> {
+  try {
+    const response = await axios.post(
+      `${this.baseUrl}/${this.phoneNumberId}/messages`,
+      {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: chatId.replace("@c.us", ""),
+        type: "text",
+        text: {
+          body: message,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${this.accessToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    } catch (error) {
-      console.error("Error sending message:", error);
-      throw error;
-    }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    // ✅ Return only the message ID as a string
+    return response.data.messages[0].id;
+  } catch (error) {
+    console.error("Error sending message:", error);
+    throw error;
   }
+}
+
+
 }

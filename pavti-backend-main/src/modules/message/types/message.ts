@@ -20,6 +20,9 @@ export interface IMessage {
   senderName?: string;
   conversationId?: string;
   hasAttachment: boolean;
+  isPavti?: boolean;
+  isRasoi?: boolean;
+  isError?: boolean;
   mobileNumber?: number;
   event?: Record<string, any>;
   createdAt?: Date;
@@ -44,6 +47,9 @@ export class Message implements IMessage {
   senderName?: string;
   conversationId?: string;
   hasAttachment: boolean;
+  isPavti?: boolean;
+  isRasoi?: boolean;
+  isError?: boolean;
   mobileNumber?: number;
   event?: Record<string, any>;
   createdAt?: Date;
@@ -69,6 +75,9 @@ export class Message implements IMessage {
     this.senderName = input?.senderName;
     this.conversationId = input?.conversationId;
     this.hasAttachment = input?.hasAttachment ?? false;
+    this.isPavti = input?.isPavti ?? false;
+    this.isRasoi = input?.isRasoi ?? false;
+    this.isError = input?.isError ?? false;
     this.mobileNumber = input?.mobileNumber;
     this.event = input?.event;
     this.createdAt = input?.createdAt;

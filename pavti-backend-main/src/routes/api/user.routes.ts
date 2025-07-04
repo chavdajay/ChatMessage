@@ -41,7 +41,7 @@ router.get("/users", async (req, res) => {
   }
 });
 
-// ✅ POST create new user
+// POST create new user
 router.post("/users", async (req, res) => {
   try {
     const { fullName, email, contactNo, isApprove, isActive, isTempName } = req.body;
